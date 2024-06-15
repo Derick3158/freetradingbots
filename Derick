@@ -1,0 +1,44 @@
+import ccxt
+import pandas as pd
+import time
+
+# Initialize exchange
+exchange = ccxt.binance({
+    'apiKey': 'YOUR_API_KEY',
+    'secret': 'YOUR_SECRET_KEY',
+})
+
+# Define the trading pair
+pair = 'C4/VOLT'
+
+# Fetch historical data
+def fetch_data():
+    bars = exchange.fetch_ohlcv(pair, timeframe='1h', limit=100)
+    df = pd.DataFrame(bars, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+    return df
+
+# Define a simple moving average strategy
+def moving_average_strategy(df):
+    df['SMA50'] = df['close'].rolling(window=50).mean()
+    df['SMA200'] = df['close'].rolling(window=200).mean()
+    if df['SMA50'].iloc[-1] > df['SMA200'].iloc[-1]:
+        return 'buy'
+    elif df['SMA50'].iloc[-1] < df['SMA200'].iloc[-1]:
+        return 'sell'
+    else:
+        return 'hold'
+
+# Execute trades
+def execute_trade(signal):
+    if signal == 'buy':
+        order = exchange.create_market_buy_order(pair, 1)
+    elif signal == 'sell':
+        order = exchange.create_market_sell_order(pair, 1)
+    print(order)
+
+# Main loop
+while True:
+    data = fetch_data()
+    signal = moving_average_strategy(data)
+    execute_trade(signal)
+    time.sleep(3600)  # Wait for one hour
